@@ -1,0 +1,303 @@
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "TeleportSystemGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Name = "ToggleButton"
+toggleBtn.Size = UDim2.new(0, 80, 0, 30)
+toggleBtn.Position = UDim2.new(0.05, 0, 0.24, 0)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+toggleBtn.Text = "🔴 ปิด GUI"
+toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+toggleBtn.TextSize = 12
+toggleBtn.Font = Enum.Font.SourceSansBold
+toggleBtn.Active = true
+toggleBtn.Draggable = true
+toggleBtn.Parent = screenGui
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 8)
+toggleCorner.Parent = toggleBtn
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 220, 0, 420)
+mainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+mainFrame.BorderSizePixel = 0
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+toggleBtn.MouseButton1Click:Connect(function()
+    mainFrame.Visible = not mainFrame.Visible
+    if mainFrame.Visible then
+        toggleBtn.Text = "🔴 ปิด GUI"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    else
+        toggleBtn.Text = "🟢 เปิด GUI"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(46, 139, 87)
+    end
+end)
+
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0, 10)
+frameCorner.Parent = mainFrame
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 35)
+titleLabel.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+titleLabel.Text = "📍 ระบบบันทึก & Auto วาร์ป"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextSize = 14
+titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.Parent = mainFrame
+
+local titleCorner = Instance.new("UICorner")
+titleCorner.CornerRadius = UDim.new(0, 10)
+titleCorner.Parent = titleLabel
+
+local nameBox = Instance.new("TextBox")
+nameBox.Size = UDim2.new(0.9, 0, 0, 28)
+nameBox.Position = UDim2.new(0.05, 0, 0.10, 0)
+nameBox.PlaceholderText = "ตั้งชื่อจุดตรงนี้..."
+nameBox.Text = ""
+nameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+nameBox.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+nameBox.TextSize = 12
+nameBox.Font = Enum.Font.SourceSans
+nameBox.Parent = mainFrame
+
+local boxCorner = Instance.new("UICorner")
+boxCorner.CornerRadius = UDim.new(0, 6)
+boxCorner.Parent = nameBox
+
+local saveBtn = Instance.new("TextButton")
+saveBtn.Size = UDim2.new(0.9, 0, 0, 28)
+saveBtn.Position = UDim2.new(0.05, 0, 0.18, 0)
+saveBtn.Text = "➕ บันทึกจุดตำแหน่งปัจจุบัน"
+saveBtn.BackgroundColor3 = Color3.fromRGB(46, 139, 87)
+saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+saveBtn.TextSize = 12
+saveBtn.Font = Enum.Font.SourceSansBold
+saveBtn.Parent = mainFrame
+
+local saveCorner = Instance.new("UICorner")
+saveCorner.CornerRadius = UDim.new(0, 6)
+saveCorner.Parent = saveBtn
+
+local autoDelayBox = Instance.new("TextBox")
+autoDelayBox.Size = UDim2.new(0.42, 0, 0, 28)
+autoDelayBox.Position = UDim2.new(0.05, 0, 0.26, 0)
+autoDelayBox.PlaceholderText = "วิ (เช่น 3)"
+autoDelayBox.Text = "3"
+autoDelayBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+autoDelayBox.BackgroundColor3 = Color3.fromRGB(50, 50, 65)
+autoDelayBox.TextSize = 12
+autoDelayBox.Font = Enum.Font.SourceSans
+autoDelayBox.Parent = mainFrame
+
+local delayCorner = Instance.new("UICorner")
+delayCorner.CornerRadius = UDim.new(0, 6)
+delayCorner.Parent = autoDelayBox
+
+local autoBtn = Instance.new("TextButton")
+autoBtn.Size = UDim2.new(0.45, 0, 0, 28)
+autoBtn.Position = UDim2.new(0.5, 0, 0.26, 0)
+autoBtn.Text = "▶️ เริ่ม Auto"
+autoBtn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+autoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+autoBtn.TextSize = 12
+autoBtn.Font = Enum.Font.SourceSansBold
+autoBtn.Parent = mainFrame
+
+local autoCorner = Instance.new("UICorner")
+autoCorner.CornerRadius = UDim.new(0, 6)
+autoCorner.Parent = autoBtn
+
+-- ปุ่มเปิด/ปิด Auto Reset
+local resetToggleBtn = Instance.new("TextButton")
+resetToggleBtn.Size = UDim2.new(0.9, 0, 0, 24)
+resetToggleBtn.Position = UDim2.new(0.05, 0, 0.34, 0)
+resetToggleBtn.Text = "❌ Auto Reset: ปิด"
+resetToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+resetToggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+resetToggleBtn.TextSize = 11
+resetToggleBtn.Font = Enum.Font.SourceSansBold
+resetToggleBtn.Parent = mainFrame
+
+local resetToggleCorner = Instance.new("UICorner")
+resetToggleCorner.CornerRadius = UDim.new(0, 6)
+resetToggleCorner.Parent = resetToggleBtn
+
+local scrollFrame = Instance.new("ScrollingFrame")
+scrollFrame.Size = UDim2.new(0.9, 0, 0.56, 0)
+scrollFrame.Position = UDim2.new(0.05, 0, 0.41, 0)
+scrollFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
+scrollFrame.BorderSizePixel = 0
+scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+scrollFrame.ScrollBarThickness = 4
+scrollFrame.Parent = mainFrame
+
+local scrollCorner = Instance.new("UICorner")
+scrollCorner.CornerRadius = UDim.new(0, 6)
+scrollCorner.Parent = scrollFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Parent = scrollFrame
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 5)
+
+local savedLocations = {}
+local savedOrder = {}
+local pointCount = 0
+local isAutoTeleporting = false
+local isAutoResetEnabled = false
+
+UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    scrollFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 10)
+end)
+
+local function teleportTo(cframe)
+    local character = player.Character
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = cframe + Vector3.new(0, 3, 0)
+    end
+end
+
+-- ฟังก์ชันรีเซ็ตตัวละคร
+local function resetCharacter()
+    local character = player.Character
+    if character then
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.Health = 0
+        end
+    end
+end
+
+-- สลับสถานะ Auto Reset
+resetToggleBtn.MouseButton1Click:Connect(function()
+    isAutoResetEnabled = not isAutoResetEnabled
+    if isAutoResetEnabled then
+        resetToggleBtn.Text = "✅ Auto Reset: เปิด"
+        resetToggleBtn.BackgroundColor3 = Color3.fromRGB(180, 100, 40)
+        resetToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    else
+        resetToggleBtn.Text = "❌ Auto Reset: ปิด"
+        resetToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+        resetToggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+    end
+end)
+
+-- ระบบวนวาร์ปอัตโนมัติ (Auto Teleport Loop)
+task.spawn(function()
+    while true do
+        if isAutoTeleporting and #savedOrder > 0 then
+            local totalPoints = #savedOrder
+            for index, name in ipairs(savedOrder) do
+                if not isAutoTeleporting then break end
+                if savedLocations[name] then
+                    teleportTo(savedLocations[name])
+                    local delayTime = tonumber(autoDelayBox.Text) or 3
+                    task.wait(math.max(0.5, delayTime))
+
+                    -- เมื่อถึงจุดสุดท้าย และเปิดระบบ Auto Reset ไว้
+                    if index == totalPoints and isAutoResetEnabled and isAutoTeleporting then
+                        resetCharacter()
+                        -- รอจนกว่าตัวละครจะเกิดใหม่สมบูรณ์
+                        local newCharacter = player.CharacterAdded:Wait()
+                        newCharacter:WaitForChild("HumanoidRootPart")
+                        task.wait(1) -- รอสปอว์นเสร็จเรียบร้อย
+                    end
+                end
+            end
+        else
+            task.wait(0.5)
+        end
+    end
+end)
+
+autoBtn.MouseButton1Click:Connect(function()
+    isAutoTeleporting = not isAutoTeleporting
+    if isAutoTeleporting then
+        autoBtn.Text = "⏹️ หยุด Auto"
+        autoBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+    else
+        autoBtn.Text = "▶️ เริ่ม Auto"
+        autoBtn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+    end
+end)
+
+saveBtn.MouseButton1Click:Connect(function()
+    local character = player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+
+    local pointName = nameBox.Text
+    if pointName == "" or pointName == " " then
+        pointCount = pointCount + 1
+        pointName = "จุดที่ " .. pointCount
+    end
+
+    local currentCFrame = character.HumanoidRootPart.CFrame
+    savedLocations[pointName] = currentCFrame
+    table.insert(savedOrder, pointName)
+
+    local itemFrame = Instance.new("Frame")
+    itemFrame.Size = UDim2.new(1, -6, 0, 30)
+    itemFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 60)
+    itemFrame.Parent = scrollFrame
+
+    local itemCorner = Instance.new("UICorner")
+    itemCorner.CornerRadius = UDim.new(0, 4)
+    itemCorner.Parent = itemFrame
+
+    local tpBtn = Instance.new("TextButton")
+    tpBtn.Size = UDim2.new(0.7, 0, 1, 0)
+    tpBtn.Position = UDim2.new(0, 0, 0, 0)
+    tpBtn.BackgroundTransparency = 1
+    tpBtn.Text = "  📍 " .. pointName
+    tpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    tpBtn.TextXAlignment = Enum.TextXAlignment.Left
+    tpBtn.TextSize = 12
+    tpBtn.Font = Enum.Font.SourceSans
+    tpBtn.Parent = itemFrame
+
+    local delBtn = Instance.new("TextButton")
+    delBtn.Size = UDim2.new(0.25, 0, 0.8, 0)
+    delBtn.Position = UDim2.new(0.72, 0, 0.1, 0)
+    delBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+    delBtn.Text = "ลบ"
+    delBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    delBtn.TextSize = 11
+    delBtn.Font = Enum.Font.SourceSansBold
+    delBtn.Parent = itemFrame
+
+    local delCorner = Instance.new("UICorner")
+    delCorner.CornerRadius = UDim.new(0, 4)
+    delCorner.Parent = delBtn
+
+    tpBtn.MouseButton1Click:Connect(function()
+        if savedLocations[pointName] then
+            teleportTo(savedLocations[pointName])
+        end
+    end)
+
+    delBtn.MouseButton1Click:Connect(function()
+        savedLocations[pointName] = nil
+        for i, v in ipairs(savedOrder) do
+            if v == pointName then
+                table.remove(savedOrder, i)
+                break
+            end
+        end
+        itemFrame:Destroy()
+    end)
+
+    nameBox.Text = ""
+end)
