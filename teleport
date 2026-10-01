@@ -1,11 +1,44 @@
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
+
+-- ลบ GUI เก่าถ้ารันซ้ำ (กันซ้อนกันแล้วกดไม่โดน)
+for _, parent in ipairs({playerGui, game:GetService("CoreGui")}) do
+    pcall(function()
+        local old = parent:FindFirstChild("TeleportSystemGui")
+        if old then old:Destroy() end
+    end)
+end
+pcall(function()
+    local oldMarkers = workspace:FindFirstChild("TeleportMarkers")
+    if oldMarkers then oldMarkers:Destroy() end
+end)
 
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "TeleportSystemGui"
 screenGui.ResetOnSpawn = false
-screenGui.Parent = playerGui
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.DisplayOrder = 999999 -- ให้อยู่บนสุด เหนือ GUI ของเกม
+screenGui.IgnoreGuiInset = false
+
+-- พยายามใส่ในที่ที่อยู่เหนือ GUI ของเกมทั้งหมดก่อน ถ้าไม่ได้ค่อยใช้ PlayerGui
+local parentGui = playerGui
+pcall(function()
+    if gethui then
+        parentGui = gethui()
+    else
+        parentGui = game:GetService("CoreGui")
+    end
+end)
+
+local ok = pcall(function()
+    screenGui.Parent = parentGui
+end)
+if not ok or screenGui.Parent == nil then
+    screenGui.Parent = playerGui
+end
 
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Name = "ToggleButton"
@@ -26,24 +59,13 @@ toggleCorner.Parent = toggleBtn
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 220, 0, 420)
+mainFrame.Size = UDim2.new(0, 220, 0, 585)
 mainFrame.Position = UDim2.new(0.05, 0, 0.3, 0)
 mainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
 mainFrame.BorderSizePixel = 0
 mainFrame.Active = true
 mainFrame.Draggable = true
 mainFrame.Parent = screenGui
-
-toggleBtn.MouseButton1Click:Connect(function()
-    mainFrame.Visible = not mainFrame.Visible
-    if mainFrame.Visible then
-        toggleBtn.Text = "🔴 ปิด GUI"
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
-    else
-        toggleBtn.Text = "🟢 เปิด GUI"
-        toggleBtn.BackgroundColor3 = Color3.fromRGB(46, 139, 87)
-    end
-end)
 
 local frameCorner = Instance.new("UICorner")
 frameCorner.CornerRadius = UDim.new(0, 10)
@@ -64,7 +86,7 @@ titleCorner.Parent = titleLabel
 
 local nameBox = Instance.new("TextBox")
 nameBox.Size = UDim2.new(0.9, 0, 0, 28)
-nameBox.Position = UDim2.new(0.05, 0, 0.10, 0)
+nameBox.Position = UDim2.new(0.05, 0, 0, 42)
 nameBox.PlaceholderText = "ตั้งชื่อจุดตรงนี้..."
 nameBox.Text = ""
 nameBox.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -79,7 +101,7 @@ boxCorner.Parent = nameBox
 
 local saveBtn = Instance.new("TextButton")
 saveBtn.Size = UDim2.new(0.9, 0, 0, 28)
-saveBtn.Position = UDim2.new(0.05, 0, 0.18, 0)
+saveBtn.Position = UDim2.new(0.05, 0, 0, 75)
 saveBtn.Text = "➕ บันทึกจุดตำแหน่งปัจจุบัน"
 saveBtn.BackgroundColor3 = Color3.fromRGB(46, 139, 87)
 saveBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -93,7 +115,7 @@ saveCorner.Parent = saveBtn
 
 local autoDelayBox = Instance.new("TextBox")
 autoDelayBox.Size = UDim2.new(0.42, 0, 0, 28)
-autoDelayBox.Position = UDim2.new(0.05, 0, 0.26, 0)
+autoDelayBox.Position = UDim2.new(0.05, 0, 0, 108)
 autoDelayBox.PlaceholderText = "วิ (เช่น 3)"
 autoDelayBox.Text = "3"
 autoDelayBox.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -108,7 +130,7 @@ delayCorner.Parent = autoDelayBox
 
 local autoBtn = Instance.new("TextButton")
 autoBtn.Size = UDim2.new(0.45, 0, 0, 28)
-autoBtn.Position = UDim2.new(0.5, 0, 0.26, 0)
+autoBtn.Position = UDim2.new(0.5, 0, 0, 108)
 autoBtn.Text = "▶️ เริ่ม Auto"
 autoBtn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
 autoBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -123,7 +145,7 @@ autoCorner.Parent = autoBtn
 -- ปุ่มเปิด/ปิด Auto Reset
 local resetToggleBtn = Instance.new("TextButton")
 resetToggleBtn.Size = UDim2.new(0.9, 0, 0, 24)
-resetToggleBtn.Position = UDim2.new(0.05, 0, 0.34, 0)
+resetToggleBtn.Position = UDim2.new(0.05, 0, 0, 141)
 resetToggleBtn.Text = "❌ Auto Reset: ปิด"
 resetToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
 resetToggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -135,9 +157,36 @@ local resetToggleCorner = Instance.new("UICorner")
 resetToggleCorner.CornerRadius = UDim.new(0, 6)
 resetToggleCorner.Parent = resetToggleBtn
 
+-- ปุ่มเปิด/ปิด แสดงจุดในเกม
+local markerToggleBtn = Instance.new("TextButton")
+markerToggleBtn.Size = UDim2.new(0.9, 0, 0, 24)
+markerToggleBtn.Position = UDim2.new(0.05, 0, 0, 170)
+markerToggleBtn.Text = "👁️ แสดงจุด: เปิด"
+markerToggleBtn.BackgroundColor3 = Color3.fromRGB(46, 139, 87)
+markerToggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+markerToggleBtn.TextSize = 11
+markerToggleBtn.Font = Enum.Font.SourceSansBold
+markerToggleBtn.Parent = mainFrame
+
+local markerToggleCorner = Instance.new("UICorner")
+markerToggleCorner.CornerRadius = UDim.new(0, 6)
+markerToggleCorner.Parent = markerToggleBtn
+
+-- ส่วนตั้งค่าคีย์ลัด
+local keybindTitle = Instance.new("TextLabel")
+keybindTitle.Size = UDim2.new(0.9, 0, 0, 16)
+keybindTitle.Position = UDim2.new(0.05, 0, 0, 202)
+keybindTitle.BackgroundTransparency = 1
+keybindTitle.Text = "⌨️ คีย์ลัด (คลิกปุ่มแล้วกดคีย์ใหม่)"
+keybindTitle.TextColor3 = Color3.fromRGB(200, 200, 200)
+keybindTitle.TextSize = 11
+keybindTitle.Font = Enum.Font.SourceSansBold
+keybindTitle.TextXAlignment = Enum.TextXAlignment.Left
+keybindTitle.Parent = mainFrame
+
 local scrollFrame = Instance.new("ScrollingFrame")
-scrollFrame.Size = UDim2.new(0.9, 0, 0.56, 0)
-scrollFrame.Position = UDim2.new(0.05, 0, 0.41, 0)
+scrollFrame.Size = UDim2.new(0.9, 0, 0, 208)
+scrollFrame.Position = UDim2.new(0.05, 0, 0, 368)
 scrollFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 35)
 scrollFrame.BorderSizePixel = 0
 scrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
@@ -158,6 +207,7 @@ local savedOrder = {}
 local pointCount = 0
 local isAutoTeleporting = false
 local isAutoResetEnabled = false
+local isMarkersVisible = true
 
 UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
     scrollFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 10)
@@ -181,8 +231,134 @@ local function resetCharacter()
     end
 end
 
--- สลับสถานะ Auto Reset
-resetToggleBtn.MouseButton1Click:Connect(function()
+----------------------------------------------------------------
+-- ระบบแสดงจุดในเกม (ลูกบอล + ป้ายชื่อ + ระยะห่าง)
+----------------------------------------------------------------
+local markersFolder = Instance.new("Folder")
+markersFolder.Name = "TeleportMarkers"
+markersFolder.Parent = workspace
+
+local markers = {} -- [ชื่อจุด] = {part = Part, distLabel = TextLabel}
+
+local function createMarker(pointName, cframe)
+    local part = Instance.new("Part")
+    part.Name = "Marker_" .. pointName
+    part.Shape = Enum.PartType.Ball
+    part.Size = Vector3.new(1.5, 1.5, 1.5)
+    part.Anchored = true
+    part.CanCollide = false
+    part.CanQuery = false
+    part.CanTouch = false
+    part.CastShadow = false
+    part.Material = Enum.Material.Neon
+    part.Color = Color3.fromRGB(80, 255, 140)
+    part.Position = cframe.Position
+    part.Parent = markersFolder
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Size = UDim2.new(0, 140, 0, 38)
+    billboard.StudsOffset = Vector3.new(0, 2.5, 0)
+    billboard.AlwaysOnTop = true
+    billboard.MaxDistance = math.huge
+    billboard.Adornee = part
+    billboard.Parent = part
+
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(1, 0, 0.55, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = "📍 " .. pointName
+    nameLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    nameLabel.TextStrokeTransparency = 0.3
+    nameLabel.TextSize = 14
+    nameLabel.Font = Enum.Font.SourceSansBold
+    nameLabel.Parent = billboard
+
+    local distLabel = Instance.new("TextLabel")
+    distLabel.Size = UDim2.new(1, 0, 0.45, 0)
+    distLabel.Position = UDim2.new(0, 0, 0.55, 0)
+    distLabel.BackgroundTransparency = 1
+    distLabel.Text = ""
+    distLabel.TextColor3 = Color3.fromRGB(180, 255, 200)
+    distLabel.TextStrokeTransparency = 0.3
+    distLabel.TextSize = 12
+    distLabel.Font = Enum.Font.SourceSans
+    distLabel.Parent = billboard
+
+    markers[pointName] = {part = part, distLabel = distLabel}
+end
+
+local function removeMarker(pointName)
+    local m = markers[pointName]
+    if m then
+        m.part:Destroy()
+        markers[pointName] = nil
+    end
+end
+
+-- อัปเดตระยะห่างจากตัวเรา
+RunService.Heartbeat:Connect(function()
+    if not isMarkersVisible then return end
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    for _, m in pairs(markers) do
+        local dist = (m.part.Position - root.Position).Magnitude
+        m.distLabel.Text = math.floor(dist + 0.5) .. " studs"
+    end
+end)
+
+----------------------------------------------------------------
+-- ข้อมูลคีย์ลัด (ใช้ร่วมกันทั้งคำสั่งหลักและจุดที่บันทึก)
+-- id ของคำสั่งหลัก = ชื่อคำสั่ง, id ของจุด = "pt:" .. ชื่อจุด
+----------------------------------------------------------------
+local keybinds = {
+    toggleGui     = Enum.KeyCode.RightShift,
+    savePoint     = Enum.KeyCode.K,
+    toggleAuto    = Enum.KeyCode.J,
+    toggleReset   = Enum.KeyCode.L,
+    toggleMarkers = Enum.KeyCode.H,
+}
+
+local keyButtons = {}
+local listeningFor = nil
+
+local function refreshKeyButton(id)
+    local btn = keyButtons[id]
+    if not btn then return end
+    if listeningFor == id then
+        btn.Text = "... กดคีย์"
+        btn.BackgroundColor3 = Color3.fromRGB(180, 100, 40)
+    else
+        local key = keybinds[id]
+        btn.Text = key and key.Name or "ไม่มี"
+        btn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
+    end
+end
+
+local function toggleListening(id)
+    local previous = listeningFor
+    listeningFor = (previous == id) and nil or id
+    if previous then refreshKeyButton(previous) end
+    refreshKeyButton(id)
+end
+
+----------------------------------------------------------------
+-- ฟังก์ชันคำสั่งหลัก (ใช้ร่วมกันทั้งปุ่มและคีย์ลัด)
+----------------------------------------------------------------
+local actions = {}
+
+function actions.toggleGui()
+    mainFrame.Visible = not mainFrame.Visible
+    if mainFrame.Visible then
+        toggleBtn.Text = "🔴 ปิด GUI"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 55)
+    else
+        toggleBtn.Text = "🟢 เปิด GUI"
+        toggleBtn.BackgroundColor3 = Color3.fromRGB(46, 139, 87)
+    end
+end
+
+function actions.toggleReset()
     isAutoResetEnabled = not isAutoResetEnabled
     if isAutoResetEnabled then
         resetToggleBtn.Text = "✅ Auto Reset: เปิด"
@@ -193,37 +369,9 @@ resetToggleBtn.MouseButton1Click:Connect(function()
         resetToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
         resetToggleBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
     end
-end)
+end
 
--- ระบบวนวาร์ปอัตโนมัติ (Auto Teleport Loop)
-task.spawn(function()
-    while true do
-        if isAutoTeleporting and #savedOrder > 0 then
-            local totalPoints = #savedOrder
-            for index, name in ipairs(savedOrder) do
-                if not isAutoTeleporting then break end
-                if savedLocations[name] then
-                    teleportTo(savedLocations[name])
-                    local delayTime = tonumber(autoDelayBox.Text) or 3
-                    task.wait(math.max(0.5, delayTime))
-
-                    -- เมื่อถึงจุดสุดท้าย และเปิดระบบ Auto Reset ไว้
-                    if index == totalPoints and isAutoResetEnabled and isAutoTeleporting then
-                        resetCharacter()
-                        -- รอจนกว่าตัวละครจะเกิดใหม่สมบูรณ์
-                        local newCharacter = player.CharacterAdded:Wait()
-                        newCharacter:WaitForChild("HumanoidRootPart")
-                        task.wait(1) -- รอสปอว์นเสร็จเรียบร้อย
-                    end
-                end
-            end
-        else
-            task.wait(0.5)
-        end
-    end
-end)
-
-autoBtn.MouseButton1Click:Connect(function()
+function actions.toggleAuto()
     isAutoTeleporting = not isAutoTeleporting
     if isAutoTeleporting then
         autoBtn.Text = "⏹️ หยุด Auto"
@@ -232,9 +380,21 @@ autoBtn.MouseButton1Click:Connect(function()
         autoBtn.Text = "▶️ เริ่ม Auto"
         autoBtn.BackgroundColor3 = Color3.fromRGB(70, 130, 180)
     end
-end)
+end
 
-saveBtn.MouseButton1Click:Connect(function()
+function actions.toggleMarkers()
+    isMarkersVisible = not isMarkersVisible
+    markersFolder.Parent = isMarkersVisible and workspace or nil
+    if isMarkersVisible then
+        markerToggleBtn.Text = "👁️ แสดงจุด: เปิด"
+        markerToggleBtn.BackgroundColor3 = Color3.fromRGB(46, 139, 87)
+    else
+        markerToggleBtn.Text = "🚫 แสดงจุด: ปิด"
+        markerToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
+    end
+end
+
+function actions.savePoint()
     local character = player.Character
     if not character or not character:FindFirstChild("HumanoidRootPart") then return end
 
@@ -244,9 +404,23 @@ saveBtn.MouseButton1Click:Connect(function()
         pointName = "จุดที่ " .. pointCount
     end
 
+    -- ถ้าชื่อซ้ำ ให้ต่อท้ายเลข เพื่อให้คีย์ลัดของแต่ละจุดไม่ชนกัน
+    if savedLocations[pointName] then
+        local base = pointName
+        local n = 2
+        while savedLocations[base .. " (" .. n .. ")"] do
+            n = n + 1
+        end
+        pointName = base .. " (" .. n .. ")"
+    end
+
+    local pointId = "pt:" .. pointName
     local currentCFrame = character.HumanoidRootPart.CFrame
     savedLocations[pointName] = currentCFrame
     table.insert(savedOrder, pointName)
+
+    -- สร้างลูกบอลแสดงจุดในเกม
+    createMarker(pointName, currentCFrame)
 
     local itemFrame = Instance.new("Frame")
     itemFrame.Size = UDim2.new(1, -6, 0, 30)
@@ -258,19 +432,36 @@ saveBtn.MouseButton1Click:Connect(function()
     itemCorner.Parent = itemFrame
 
     local tpBtn = Instance.new("TextButton")
-    tpBtn.Size = UDim2.new(0.7, 0, 1, 0)
+    tpBtn.Size = UDim2.new(0.5, 0, 1, 0)
     tpBtn.Position = UDim2.new(0, 0, 0, 0)
     tpBtn.BackgroundTransparency = 1
     tpBtn.Text = "  📍 " .. pointName
     tpBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     tpBtn.TextXAlignment = Enum.TextXAlignment.Left
+    tpBtn.TextTruncate = Enum.TextTruncate.AtEnd
     tpBtn.TextSize = 12
     tpBtn.Font = Enum.Font.SourceSans
     tpBtn.Parent = itemFrame
 
+    -- ปุ่มตั้งคีย์ลัดของจุดนี้
+    local ptKeyBtn = Instance.new("TextButton")
+    ptKeyBtn.Size = UDim2.new(0.26, 0, 0.8, 0)
+    ptKeyBtn.Position = UDim2.new(0.51, 0, 0.1, 0)
+    ptKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ptKeyBtn.TextSize = 10
+    ptKeyBtn.Font = Enum.Font.SourceSansBold
+    ptKeyBtn.Parent = itemFrame
+    keyButtons[pointId] = ptKeyBtn
+
+    local ptKeyCorner = Instance.new("UICorner")
+    ptKeyCorner.CornerRadius = UDim.new(0, 4)
+    ptKeyCorner.Parent = ptKeyBtn
+
+    refreshKeyButton(pointId)
+
     local delBtn = Instance.new("TextButton")
-    delBtn.Size = UDim2.new(0.25, 0, 0.8, 0)
-    delBtn.Position = UDim2.new(0.72, 0, 0.1, 0)
+    delBtn.Size = UDim2.new(0.2, 0, 0.8, 0)
+    delBtn.Position = UDim2.new(0.78, 0, 0.1, 0)
     delBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
     delBtn.Text = "ลบ"
     delBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -288,6 +479,10 @@ saveBtn.MouseButton1Click:Connect(function()
         end
     end)
 
+    ptKeyBtn.MouseButton1Click:Connect(function()
+        toggleListening(pointId)
+    end)
+
     delBtn.MouseButton1Click:Connect(function()
         savedLocations[pointName] = nil
         for i, v in ipairs(savedOrder) do
@@ -296,8 +491,148 @@ saveBtn.MouseButton1Click:Connect(function()
                 break
             end
         end
+        -- ล้างคีย์ลัดและลูกบอลของจุดนี้
+        keybinds[pointId] = nil
+        keyButtons[pointId] = nil
+        if listeningFor == pointId then
+            listeningFor = nil
+        end
+        removeMarker(pointName)
         itemFrame:Destroy()
     end)
 
     nameBox.Text = ""
+end
+
+-- ผูกปุ่มบน GUI กับคำสั่ง
+toggleBtn.MouseButton1Click:Connect(actions.toggleGui)
+resetToggleBtn.MouseButton1Click:Connect(actions.toggleReset)
+autoBtn.MouseButton1Click:Connect(actions.toggleAuto)
+saveBtn.MouseButton1Click:Connect(actions.savePoint)
+markerToggleBtn.MouseButton1Click:Connect(actions.toggleMarkers)
+
+----------------------------------------------------------------
+-- สร้างแถวตั้งคีย์ลัดของคำสั่งหลัก
+----------------------------------------------------------------
+local actionList = {
+    {id = "toggleGui",     label = "เปิด/ปิด GUI"},
+    {id = "savePoint",     label = "บันทึกจุด"},
+    {id = "toggleAuto",    label = "เริ่ม/หยุด Auto"},
+    {id = "toggleReset",   label = "Auto Reset"},
+    {id = "toggleMarkers", label = "แสดงจุด"},
+}
+
+for i, info in ipairs(actionList) do
+    local y = 222 + (i - 1) * 28
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(0.5, 0, 0, 24)
+    label.Position = UDim2.new(0.05, 0, 0, y)
+    label.BackgroundTransparency = 1
+    label.Text = info.label
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 11
+    label.Font = Enum.Font.SourceSans
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = mainFrame
+
+    local keyBtn = Instance.new("TextButton")
+    keyBtn.Size = UDim2.new(0.38, 0, 0, 24)
+    keyBtn.Position = UDim2.new(0.57, 0, 0, y)
+    keyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    keyBtn.TextSize = 11
+    keyBtn.Font = Enum.Font.SourceSansBold
+    keyBtn.Parent = mainFrame
+    keyButtons[info.id] = keyBtn
+
+    local keyCorner = Instance.new("UICorner")
+    keyCorner.CornerRadius = UDim.new(0, 6)
+    keyCorner.Parent = keyBtn
+
+    refreshKeyButton(info.id)
+
+    keyBtn.MouseButton1Click:Connect(function()
+        toggleListening(info.id)
+    end)
+end
+
+----------------------------------------------------------------
+-- รับคีย์จากคีย์บอร์ด
+----------------------------------------------------------------
+local function runBind(id)
+    if actions[id] then
+        actions[id]()
+    elseif string.sub(id, 1, 3) == "pt:" then
+        local name = string.sub(id, 4)
+        if savedLocations[name] then
+            teleportTo(savedLocations[name])
+        end
+    end
+end
+
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+
+    -- โหมดตั้งคีย์ใหม่
+    if listeningFor then
+        local id = listeningFor
+        listeningFor = nil
+
+        if input.KeyCode == Enum.KeyCode.Escape then
+            -- ยกเลิก ไม่เปลี่ยนอะไร
+        elseif input.KeyCode == Enum.KeyCode.Backspace or input.KeyCode == Enum.KeyCode.Delete then
+            keybinds[id] = nil
+        else
+            -- ถ้าคีย์ซ้ำกับรายการอื่น ให้ล้างของเดิมออก
+            for otherId, key in pairs(keybinds) do
+                if key == input.KeyCode and otherId ~= id then
+                    keybinds[otherId] = nil
+                    refreshKeyButton(otherId)
+                end
+            end
+            keybinds[id] = input.KeyCode
+        end
+
+        refreshKeyButton(id)
+        return
+    end
+
+    -- ไม่ทำงานตอนพิมพ์ในช่องข้อความ
+    if gameProcessed then return end
+
+    for id, key in pairs(keybinds) do
+        if input.KeyCode == key then
+            runBind(id)
+            break
+        end
+    end
+end)
+
+----------------------------------------------------------------
+-- ระบบวนวาร์ปอัตโนมัติ (Auto Teleport Loop)
+----------------------------------------------------------------
+task.spawn(function()
+    while true do
+        if isAutoTeleporting and #savedOrder > 0 then
+            local totalPoints = #savedOrder
+            for index, name in ipairs(savedOrder) do
+                if not isAutoTeleporting then break end
+                if savedLocations[name] then
+                    teleportTo(savedLocations[name])
+                    local delayTime = tonumber(autoDelayBox.Text) or 3
+                    task.wait(math.max(0.5, delayTime))
+
+                    -- เมื่อถึงจุดสุดท้าย และเปิดระบบ Auto Reset ไว้
+                    if index == totalPoints and isAutoResetEnabled and isAutoTeleporting then
+                        resetCharacter()
+                        local newCharacter = player.CharacterAdded:Wait()
+                        newCharacter:WaitForChild("HumanoidRootPart")
+                        task.wait(1)
+                    end
+                end
+            end
+        else
+            task.wait(0.5)
+        end
+    end
 end)
